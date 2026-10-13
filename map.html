@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+<title>Europe's Housing Crisis Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: broadsheet map on paper. Causes (left) → fixes (right), curves in a gutter between;
+   a second row runs who pays → help. Single light theme by choice (Popular Economics paper ground). */
+:root{
+  color-scheme: light;
+  --paper:#FAF7F0; --card:#FBF8F1; --ink:#1B1712; --ink-soft:#3D3830;
+  --green:#1F8A5B; --green-deep:#12563A; --amber:#F0A93B;
+  --slate:#6B655C; --mute:#A8A296;
+  --rule-soft:rgba(27,23,18,.08); --rule:rgba(27,23,18,.12); --rule-mid:rgba(27,23,18,.18); --rule-strong:rgba(27,23,18,.22);
+  --amber-tint:rgba(240,169,59,.16); --green-tint:rgba(31,138,91,.10);
+  --font-display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --font-body:'Inter','Helvetica Neue',Arial,sans-serif;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+html{background:var(--paper)}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(31,138,91,.2)}
+.wrap{max-width:1400px;margin:0 auto;padding-inline:clamp(16px,3vw,44px);padding-block:36px 44px}
+
+header.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px 40px;align-items:end;padding-bottom:22px;border-bottom:1px solid var(--rule-mid)}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--green)}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(30px,4.2vw,48px);line-height:1.02;letter-spacing:-.035em;margin:10px 0 0;text-wrap:balance}
+.amber-rule{width:52px;height:5px;border-radius:3px;background:var(--amber);margin:16px 0 14px}
+.sub{color:var(--slate);font-size:16px;max-width:62ch;margin:0}
+.stat{text-align:right;max-width:320px}
+.stat b{display:block;font-family:var(--font-display);font-weight:800;font-size:clamp(44px,6vw,72px);line-height:.9;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.stat b span{font-size:.45em;letter-spacing:-.02em}
+.stat p{margin:8px 0 0;color:var(--ink-soft);font-size:13.5px}
+.stat small{display:block;color:var(--mute);font-size:11.5px;margin-top:4px}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;padding:16px 0 6px}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.filters button{font:600 13px var(--font-body);color:var(--ink-soft);background:transparent;border:1px solid var(--rule-strong);border-radius:4px;padding:6px 12px;cursor:pointer;transition:background .12s var(--ease),color .12s var(--ease)}
+.filters button:hover{border-color:var(--green);color:var(--green-deep)}
+.filters button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
+.hint{color:var(--slate);font-size:13px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--slate);font-size:12.5px;align-items:center}
+button:focus-visible,.node:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+.section-label{display:flex;align-items:baseline;gap:12px;margin:26px 0 12px}
+.section-label h2{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-.02em;margin:0}
+.section-label span{color:var(--slate);font-size:13px}
+
+.map{position:relative;display:grid;grid-template-columns:minmax(0,1fr) clamp(70px,9vw,150px) minmax(0,1fr)}
+.map svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.col{display:flex;flex-direction:column;gap:22px;min-width:0;position:relative;z-index:1}
+.col.left{grid-column:1}.col.right{grid-column:3}
+.colhead{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.group{display:flex;flex-direction:column;gap:8px}
+.group h3{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-.015em;margin:0;display:flex;align-items:baseline;gap:8px}
+.group h3 small{font:500 12.5px var(--font-body);color:var(--slate);letter-spacing:0}
+.tag{font:700 10px var(--font-body);letter-spacing:.14em;text-transform:uppercase;color:var(--green-deep);background:var(--green-tint);border-radius:4px;padding:3px 7px;align-self:center}
+
+.node{position:relative;background:var(--card);border:1px solid var(--rule-mid);border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;transition:opacity .12s var(--ease),border-color .12s var(--ease),background .12s var(--ease)}
+.node:hover{border-color:var(--green)}
+.node .t{font-weight:600;font-size:14.5px;line-height:1.3;color:var(--ink);display:flex;gap:8px;justify-content:space-between;align-items:flex-start}
+.node .s{font-size:13px;color:var(--ink-soft);margin-top:3px;font-variant-numeric:tabular-nums}
+.node .src{font-size:11px;color:var(--mute);margin-top:3px}
+.node .links{display:none;font-size:12.5px;color:var(--green-deep);margin-top:6px;font-weight:500}
+.speed{flex:none;font:700 10px var(--font-body);letter-spacing:.1em;text-transform:uppercase;border-radius:4px;padding:3px 6px;margin-top:1px}
+.speed.F{background:var(--green);color:#fff}
+.speed.M{border:1px solid var(--green);color:var(--green-deep);padding:2px 5px}
+.speed.S{border:1px solid var(--rule-strong);color:var(--slate);padding:2px 5px}
+
+.map.active .node,.map.active .group h3{opacity:.32}
+.map.active .node.on,.map.active .node.sel{opacity:1}
+.node.sel{border-color:var(--amber);background:var(--amber-tint);box-shadow:inset 0 0 0 1px var(--amber)}
+.node.on{border-color:var(--green)}
+.node.sel .links{display:block}
+.map.filtered .group.out{opacity:.25}
+.map.filtered .group.out .node{pointer-events:none}
+
+path.link{fill:none;stroke:var(--rule-strong);stroke-width:1.1;transition:stroke .12s var(--ease),opacity .12s var(--ease)}
+path.link.dim{opacity:.18}
+#map1.filtered path.link:not(.dim){stroke:var(--green);stroke-width:1.6}
+path.link.hot{stroke:var(--amber);stroke-width:2.2;opacity:1}
+
+.note{margin-top:30px;padding-top:16px;border-top:1px solid var(--rule-mid);display:flex;flex-wrap:wrap;gap:10px 30px;justify-content:space-between;color:var(--slate);font-size:12px}
+.note a{color:var(--green-deep)}
+.brand{font-family:var(--font-display);font-weight:800;letter-spacing:-.02em;color:var(--ink);font-size:14px}
+
+@media (max-width:760px){
+  header.top{grid-template-columns:1fr}
+  .stat{text-align:left}
+  .map{grid-template-columns:1fr}
+  .map svg{display:none}
+  .col.left,.col.right{grid-column:1}
+  .col.right{margin-top:30px}
+  .node .links{display:none}
+  .node.sel .links{display:block}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="kicker">Popular Economics · Housing</div>
+      <h1>Europe's housing crisis, mapped</h1>
+      <div class="amber-rule"></div>
+      <p class="sub">Three kinds of problem, four kinds of fix. Click any box to see what it connects to. Speed tags show how soon a fix starts to bite: fast (months), medium (1–3 years), slow (5+ years).</p>
+    </div>
+    <div class="stat">
+      <b>22 <span>capitals</span></b>
+      <p>where a third of an average income, on a 30-year mortgage, buys less than 50 m².</p>
+      <small>Source: European Commission, SWD(2025) 1053, from ESPON HOUSE4ALL</small>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="filters" role="group" aria-label="Show problems by type">
+      <button type="button" id="f-all" data-f="all" aria-pressed="true">All problems</button>
+      <button type="button" id="f-demand" data-f="demand" aria-pressed="false">Demand</button>
+      <button type="button" id="f-supply" data-f="supply" aria-pressed="false">Supply</button>
+      <button type="button" id="f-stock" data-f="stock" aria-pressed="false">Existing homes</button>
+    </div>
+    <div class="legend"><span class="speed F">Fast</span><span class="speed M">Medium</span><span class="speed S">Slow</span></div>
+  </div>
+
+  <div class="section-label"><h2>Why there aren't enough homes</h2><span>Causes → fixes</span></div>
+  <div class="map" id="map1">
+    <svg id="svg1" aria-hidden="true"></svg>
+    <div class="col left" id="problems"><div class="colhead">The problem</div></div>
+    <div class="col right" id="fixes"><div class="colhead">The fix</div></div>
+  </div>
+
+  <div class="section-label"><h2>Who pays for it</h2><span>People hit hardest → help aimed at them</span></div>
+  <div class="map" id="map2">
+    <svg id="svg2" aria-hidden="true"></svg>
+    <div class="col left" id="who"><div class="colhead">Who pays</div></div>
+    <div class="col right" id="help"><div class="colhead">Help the most affected</div></div>
+  </div>
+
+  <footer class="note">
+    <span><span class="brand">Popular Economics</span> · The European Housing Crisis, Explained</span>
+    <span><a href="index.html">See the full cause-and-effect network</a> · Source: European Commission, <a href="https://op.europa.eu/s/Ae1r" target="_blank" rel="noopener">Understanding the housing crisis</a>, Staff Working Document SWD(2025) 1053, Dec 2025. Links between boxes follow the report's own arguments.</span>
+  </footer>
+</div>
+
+<script>
+const SRC = 'EC SWD(2025) 1053';
+const problemGroups = [
+  {id:'demand', title:'Demand', sub:'more households chasing the same places', items:[
+    {id:'D1', t:'More, smaller households', s:'Households +10.3% vs population +2%, 2010–24'},
+    {id:'D2', t:'Everyone wants the same cities', s:'Urban share 75% today, 84% by 2050'},
+    {id:'D3', t:'Cheap money, then a rate shock', s:'Prices rose ~6% a year to 2022; then rate hikes cut how much buyers can borrow'},
+    {id:'D4', t:'Tax breaks that feed demand', s:'Mortgage-interest relief costs up to 1.3% of GDP (Netherlands)'},
+    {id:'D5', t:'Investors and golden visas', s:'Institutional investment in housing tripled, 2012–20'}
+  ]},
+  {id:'supply', title:'Supply', sub:'we stopped building enough', items:[
+    {id:'S1', t:'Building collapsed after 2008', s:'Housing investment peaked in 2007; permits −22% since 2021'},
+    {id:'S2', t:'Building got expensive', s:'New-build costs +22.7%, end-2020 to end-2024'},
+    {id:'S3', t:'Too few workers, falling productivity', s:'Output per hour −8.5% since 2019; labour shortages 3× a decade ago'},
+    {id:'S4', t:'Slow, fragmented permits', s:'Belgium: 2 yrs 5 months to 6 yrs 5 months for a 20+ unit project'},
+    {id:'S5', t:'Scarce, costly land', s:'Land explains 84% of house-price growth (14 OECD countries, 1950–2012)'},
+    {id:'S6', t:'Little public and social building', s:'Public residential investment: 0.04% of GDP'}
+  ]},
+  {id:'stock', title:'Existing homes', sub:'homes in the wrong place, hands or size', items:[
+    {id:'U1', t:'Homes standing empty', s:'~20% of dwellings unoccupied; 9.7% of offices vacant'},
+    {id:'U2', t:'Short-term rentals in hotspots', s:'1.2% of homes EU-wide, up to 20% in some tourist centres'},
+    {id:'U3', t:'Tenants locked in place', s:'New rents 48% above sitting rents in Germany’s 7 largest cities'},
+    {id:'U4', t:'Homes too big for who lives there', s:'Older households stay in large homes as multi-generational living fades'},
+    {id:'U5', t:'Landlords leaving the rental market', s:'Netherlands: market-rent tenants −27 points as rules tightened'}
+  ]}
+];
+const fixGroups = [
+  {id:'build', title:'Build more, faster', tag:'Boost supply', items:[
+    {id:'B1', t:'Digital permits with deadlines', sp:'M', s:'Estonia and Finland are close to fully digital', to:['S4','S1']},
+    {id:'B2', t:'Cut gold-plated local rules', sp:'M', s:'Parking minimums, even where the mailbox goes; extras add up to 15% to budgets (Poland)', to:['S4','S2']},
+    {id:'B3', t:'Modular and offsite building', sp:'M', s:'Up to 60% faster and about 20% cheaper', to:['S2','S3']},
+    {id:'B4', t:'Train and recognise construction workers', sp:'M', s:'4.2 million job openings to fill by 2035', to:['S3']},
+    {id:'B5', t:'Release land: brownfield, density, mixed zoning', sp:'S', s:'Build up and in, where demand already is', to:['S5','D2']},
+    {id:'B6', t:'Transport and broadband beyond the big cities', sp:'S', s:'Makes cheaper places viable and spreads demand', to:['D2','S5']}
+  ]},
+  {id:'free', title:'Free up the homes we have', tag:'Quickest gains', items:[
+    {id:'F1', t:'Tax homes kept empty', sp:'F', s:'France’s 1999 vacancy tax brought empty units back into use', to:['U1']},
+    {id:'F2', t:'Register and cap short-term rentals', sp:'F', s:'EU registration rules apply from May 2026', to:['U2']},
+    {id:'F3', t:'Convert empty offices and renovate vacant homes', sp:'M', s:'Top EU action in the public consultation (48%)', to:['U1']},
+    {id:'F4', t:'Help people downsize, split large homes', sp:'M', s:'Matches big homes to the rise of one- and two-person households', to:['U4','U3','D1']},
+    {id:'F5', t:'Rental rules that protect tenants and keep landlords renting', sp:'M', s:'A strong rental sector makes prices more stable', to:['U5','U3']}
+  ]},
+  {id:'invest', title:'Mobilise investment', tag:'€150bn a year', items:[
+    {id:'I1', t:'Close the funding gap', sp:'M', s:'650,000 extra homes a year ≈ €150bn a year', to:['S1','S6']},
+    {id:'I2', t:'EU money: RRF, cohesion funds, EIB', sp:'M', s:'€19.6bn for housing in the Recovery Facility alone', to:['S6','S1']},
+    {id:'I3', t:'Fiscal-rule room for housing', sp:'M', s:'Can stretch deficit adjustment from 4 to 7 years', to:['S6']},
+    {id:'I4', t:'Grow social and cooperative housing', sp:'S', s:'Social housing is 6–7% of EU homes; above 20% only in NL, AT, DK', to:['S6','U5']}
+  ]},
+  {id:'cool', title:'Stop pumping up demand', tag:'Don’t make it worse', items:[
+    {id:'C1', t:'Swap buyer subsidies and tax breaks for property taxes', sp:'M', s:'Help-to-buy schemes raise prices where supply is stuck', to:['D4','U1']},
+    {id:'C2', t:'End golden visas', sp:'F', s:'Spain has scrapped its scheme; Greece has tightened its own', to:['D5']},
+    {id:'C3', t:'Keep mortgage lending in check', sp:'F', s:'Loan-to-value caps in 22 countries prevented a credit bubble', to:['D3']}
+  ]}
+];
+const whoGroup = [{id:'who', title:'Hit hardest', sub:'insiders are shielded, outsiders pay', items:[
+  {id:'W1', t:'Young people', s:'Ownership among 25–35s −16.3% since 2007; almost half of 18–34s live with parents'},
+  {id:'W2', t:'Low-income households', s:'37% of income goes on housing, vs 16% for high earners'},
+  {id:'W3', t:'Renters and newcomers', s:'6% feared losing their home within 3 months (2020–22), up from 1%'},
+  {id:'W4', t:'Essential workers', s:'Teachers, nurses and police priced out of the cities they serve'},
+  {id:'W5', t:'Homeless people', s:'More than 1 million, including 400,000 children'},
+  {id:'W6', t:'The whole economy', s:'Workers can’t move to where the jobs are, which drags on productivity'}
+]}];
+const helpGroup = [{id:'helpg', title:'Targeted support', sub:'for the people paying most', items:[
+  {id:'H1', t:'Targeted housing allowances', sp:'F', s:'€63bn a year; cut the poverty rate by 1.4 points', to:['W2','W3']},
+  {id:'H2', t:'Housing First and eviction prevention', sp:'F', s:'Get people housed first, then fix the rest', to:['W5','W3']},
+  {id:'H3', t:'Student and young people’s housing', sp:'M', s:'Europe is 3.3 million affordable student homes short', to:['W1']},
+  {id:'H4', t:'Mixed-income neighbourhoods near jobs', sp:'M', s:'Not cheap homes in places with no transport or services', to:['W4','W6']},
+  {id:'H5', t:'Everything above: more homes where the jobs are', sp:'S', s:'The supply fixes are what eventually help everyone', to:['W1','W4','W6']}
+]}];
+
+const byId = {};
+function nodeEl(it, side){
+  const el = document.createElement('div');
+  el.className = 'node'; el.id = 'n-'+it.id; el.tabIndex = 0; el.setAttribute('role','button');
+  el.innerHTML = `<div class="t"><span>${it.t}</span>${it.sp?`<span class="speed ${it.sp}">${{F:'Fast',M:'Medium',S:'Slow'}[it.sp]}</span>`:''}</div>
+    <div class="s">${it.s}</div><div class="links"></div>`;
+  byId[it.id] = {it, el, side};
+  return el;
+}
+function renderGroups(container, groups, side){
+  groups.forEach(g=>{
+    const wrap = document.createElement('div'); wrap.className='group'; wrap.dataset.g=g.id;
+    wrap.innerHTML = `<h3>${g.title}${g.sub?` <small>${g.sub}</small>`:''}${g.tag?` <span class="tag">${g.tag}</span>`:''}</h3>`;
+    g.items.forEach(it=>{ it.group=g.id; wrap.appendChild(nodeEl(it, side)); });
+    container.appendChild(wrap);
+  });
+}
+renderGroups(document.getElementById('problems'), problemGroups, 'L');
+renderGroups(document.getElementById('fixes'), fixGroups, 'R');
+renderGroups(document.getElementById('who'), whoGroup, 'L');
+renderGroups(document.getElementById('help'), helpGroup, 'R');
+
+// links: [from(left id), to(right id), map]
+const links = [];
+[...fixGroups, ...helpGroup].forEach(g=>g.items.forEach(f=>f.to.forEach(p=>links.push({a:p, b:f.id, map: g.id==='helpg'?'map2':'map1'}))));
+const neigh = id => links.filter(l=>l.a===id||l.b===id).map(l=>l.a===id?l.b:l.a);
+Object.values(byId).forEach(({it,el})=>{
+  const n = neigh(it.id).map(x=>byId[x].it.t);
+  el.querySelector('.links').textContent = (byId[it.id].side==='L'?'Fixed by: ':'Targets: ') + n.join(' · ');
+});
+
+function draw(){
+  ['map1','map2'].forEach(mid=>{
+    const map = document.getElementById(mid), svg = map.querySelector('svg');
+    const box = map.getBoundingClientRect();
+    svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+    svg.innerHTML = '';
+    links.filter(l=>l.map===mid).forEach(l=>{
+      const A = byId[l.a].el.getBoundingClientRect(), B = byId[l.b].el.getBoundingClientRect();
+      const x1 = A.right-box.left, y1 = A.top+A.height/2-box.top, x2 = B.left-box.left, y2 = B.top+B.height/2-box.top;
+      const dx = (x2-x1)*.55;
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d', `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`);
+      p.setAttribute('class','link'); p.dataset.a=l.a; p.dataset.b=l.b;
+      svg.appendChild(p);
+    });
+  });
+  applyState();
+}
+
+let selected = null, filter = 'all';
+function applyState(){
+  document.querySelectorAll('.node').forEach(n=>n.classList.remove('sel','on'));
+  document.querySelectorAll('.map').forEach(m=>m.classList.remove('active'));
+  const hot = new Set();
+  if (selected){
+    const s = byId[selected]; s.el.classList.add('sel');
+    s.el.closest('.map').classList.add('active');
+    neigh(selected).forEach(x=>{ byId[x].el.classList.add('on'); hot.add(selected+'|'+x); hot.add(x+'|'+selected); });
+  }
+  // bucket filter (problems map only)
+  const m1 = document.getElementById('map1');
+  m1.classList.toggle('filtered', filter!=='all');
+  const inFilter = new Set();
+  if (filter!=='all'){
+    problemGroups.find(g=>g.id===filter).items.forEach(it=>{ inFilter.add(it.id); neigh(it.id).forEach(x=>inFilter.add(x)); });
+  }
+  document.querySelectorAll('#problems .group').forEach(g=>g.classList.toggle('out', filter!=='all' && g.dataset.g!==filter));
+  document.querySelectorAll('#fixes .node').forEach(n=>{ n.style.opacity = (filter!=='all' && !selected && !inFilter.has(n.id.slice(2))) ? '.25' : ''; });
+  document.querySelectorAll('path.link').forEach(p=>{
+    const k = p.dataset.a+'|'+p.dataset.b;
+    p.classList.toggle('hot', hot.has(k));
+    const filteredOut = filter!=='all' && p.closest('#svg1') && !problemGroups.find(g=>g.id===filter).items.some(it=>it.id===p.dataset.a);
+    p.classList.toggle('dim', (selected && !hot.has(k)) || !!filteredOut);
+  });
+  document.querySelectorAll('.filters button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.f===filter)));
+}
+document.querySelectorAll('.node').forEach(el=>{
+  const id = el.id.slice(2);
+  const toggle = ()=>{ selected = selected===id ? null : id; applyState(); };
+  el.addEventListener('click', e=>{ e.stopPropagation(); toggle(); });
+  el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } if(e.key==='Escape'){ selected=null; applyState(); } });
+});
+document.addEventListener('click', e=>{ if(!e.target.closest('.node') && !e.target.closest('.filters')){ selected=null; applyState(); } });
+document.querySelectorAll('.filters button').forEach(b=>b.addEventListener('click', ()=>{
+  filter = b.dataset.f; selected = null; applyState();
+  try{ history.replaceState(null,'', filter==='all' ? location.pathname : '#'+filter); }catch(e){}
+}));
+const h = (location.hash||'').slice(1);
+if (['demand','supply','stock'].includes(h)) filter = h;
+
+new ResizeObserver(()=>draw()).observe(document.querySelector('.wrap'));
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(draw);
+draw();
+</script>
+</html>

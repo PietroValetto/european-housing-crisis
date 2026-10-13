@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+<meta name="description" content="Cause-and-effect map of Europe's housing crisis, from Popular Economics.">
+<title>Housing Crisis Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a full-window causal map on paper. Nine stages left→right (forces … long-run costs),
+   pan/zoom canvas, a detail panel on the right (bottom sheet on phones), fixes as an optional band below.
+   Single light theme by choice: Popular Economics paper ground. */
+:root{
+  color-scheme: light;
+  --paper:#FAF7F0; --card:#FBF8F1; --cream:#F5EFE3; --ink:#1B1712; --ink-soft:#3D3830;
+  --green:#1F8A5B; --green-deep:#12563A; --amber:#F0A93B;
+  --slate:#6B655C; --mute:#A8A296;
+  --rule-soft:rgba(27,23,18,.08); --rule:rgba(27,23,18,.12); --rule-mid:rgba(27,23,18,.18); --rule-strong:rgba(27,23,18,.22);
+  --edge:rgba(27,23,18,.20); --amber-tint:rgba(240,169,59,.18); --green-tint:rgba(31,138,91,.10);
+  --font-display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --font-body:'Inter','Helvetica Neue',Arial,sans-serif;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+::selection{background:rgba(31,138,91,.2)}
+.app{height:100%;display:grid;grid-template-rows:auto auto minmax(0,1fr);}
+header{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-end;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--rule-mid)}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--green)}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(24px,3vw,34px);line-height:1.02;letter-spacing:-.035em;margin:6px 0 0}
+.lede{color:var(--slate);font-size:13.5px;max-width:70ch;margin:6px 0 0}
+.rule{width:52px;height:5px;border-radius:3px;background:var(--amber);margin-top:10px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--rule)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg > span{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);margin-right:2px}
+button{font:600 12.5px var(--font-body);color:var(--ink-soft);background:transparent;border:1px solid var(--rule-strong);border-radius:4px;padding:5px 10px;cursor:pointer;transition:background .12s var(--ease),color .12s var(--ease),border-color .12s var(--ease)}
+button:hover{border-color:var(--green);color:var(--green-deep)}
+button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
+button:active{transform:translateY(1px)}
+button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--slate);font-size:12px;align-items:center;margin-left:auto}
+.legend svg{vertical-align:middle;margin-right:4px}
+
+.stage{position:relative;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px}
+#canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:none;background:var(--paper)}
+#canvas:active{cursor:grabbing}
+.hint{position:absolute;left:16px;bottom:12px;font-size:12px;color:var(--slate);background:var(--paper);padding:4px 8px;border-radius:4px;border:1px solid var(--rule);pointer-events:none}
+
+aside{border-left:1px solid var(--rule-mid);overflow:auto;padding:18px 18px 28px;background:var(--paper)}
+aside .k{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--green)}
+aside h2{font-family:var(--font-display);font-weight:700;font-size:22px;line-height:1.12;letter-spacing:-.02em;margin:6px 0 8px;text-wrap:balance}
+aside .stat{font-size:14px;color:var(--ink-soft);margin:0}
+aside .src{font-size:11.5px;color:var(--mute);margin-top:6px}
+aside h3{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);margin:18px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--rule)}
+aside ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+aside li button{display:block;width:100%;text-align:left;border:0;border-radius:4px;padding:6px 8px;font:500 13px var(--font-body);color:var(--ink)}
+aside li button:hover{background:var(--green-tint);color:var(--green-deep)}
+aside li button small{display:block;color:var(--slate);font-weight:400;font-size:12px;margin-top:1px}
+aside li.fix button{color:var(--green-deep)}
+aside .empty{color:var(--slate);font-size:13px}
+aside .intro p{color:var(--ink-soft);font-size:13.5px;margin:0 0 10px}
+aside .intro ol{margin:0 0 0 18px;padding:0;color:var(--ink-soft);font-size:13px;display:flex;flex-direction:column;gap:4px}
+.speed{display:inline-block;font:700 9.5px var(--font-body);letter-spacing:.1em;text-transform:uppercase;border-radius:4px;padding:2px 5px;margin-left:6px;vertical-align:1px}
+.speed.F{background:var(--green);color:#fff}.speed.M{border:1px solid var(--green);color:var(--green-deep)}.speed.S{border:1px solid var(--rule-strong);color:var(--slate)}
+
+/* SVG */
+.colhead{font:700 10.5px var(--font-body);letter-spacing:.16em;text-transform:uppercase;fill:var(--slate)}
+.colnum{font:800 22px var(--font-display);letter-spacing:-.03em;fill:var(--rule-strong)}
+.colline{stroke:var(--rule);stroke-width:1}
+.node rect{fill:var(--card);stroke:var(--rule-mid);stroke-width:1;transition:opacity .12s var(--ease)}
+.node text{fill:var(--ink);font:600 12.5px var(--font-body)}
+.node text.kind{font:700 8.5px var(--font-body);letter-spacing:.16em;fill:var(--slate)}
+.node{cursor:pointer}
+.node:hover rect{stroke:var(--green)}
+.node.hub rect{stroke:var(--ink);stroke-width:1.4}
+.node.place rect{fill:var(--cream)}
+.node.gain rect{stroke-dasharray:3 2}
+.node.fixn rect{fill:var(--green);stroke:var(--green)}
+.node.fixn text{fill:#fff}
+path.e{fill:none;stroke:var(--edge);stroke-width:1.1}
+path.e.w2{stroke-width:1.8}
+path.e.w3{stroke-width:2.6;stroke:rgba(27,23,18,.30)}
+path.e.fb{stroke-dasharray:5 4;stroke:rgba(27,23,18,.35)}
+path.e.fx{stroke:var(--green);stroke-dasharray:4 3;stroke-width:1.2;opacity:.65}
+svg.focus .node{opacity:.18}
+svg.focus .node.lit{opacity:1}
+svg.focus path.e{opacity:.06}
+svg.focus path.e.lit{opacity:1;stroke:var(--amber)}
+svg.focus path.e.fx.lit{stroke:var(--green);opacity:1}
+.node.sel rect{stroke:var(--amber);stroke-width:2.5;fill:#FDF0D8}
+.node.lit:not(.sel):not(.fixn) rect{stroke:var(--amber)}
+#fixlayer[hidden]{display:none}
+
+@media (max-width:820px){
+  .stage{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
+  aside{border-left:0;border-top:1px solid var(--rule-mid);max-height:40vh}
+  .legend{margin-left:0}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header>
+    <div>
+      <div class="kicker">Popular Economics · The European Housing Crisis, Explained</div>
+      <h1>What drives Europe's housing crisis</h1>
+      <p class="lede">Every arrow is a cause-and-effect link argued in the European Commission's 2025 evidence report. Read left to right: from the forces at work, through what they do to costs and supply, to where prices bite and who ends up paying.</p>
+    </div>
+    <div class="rule" aria-hidden="true"></div>
+  </header>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Trace direction">
+      <span>Trace</span>
+      <button type="button" id="m-both" data-mode="both" aria-pressed="true">Causes and effects</button>
+      <button type="button" id="m-up" data-mode="up" aria-pressed="false">Causes only</button>
+      <button type="button" id="m-down" data-mode="down" aria-pressed="false">Effects only</button>
+    </div>
+    <div class="seg" role="group" aria-label="Follow a type of pressure">
+      <span>Follow</span>
+      <button type="button" id="k-demand" data-kind="demand" aria-pressed="false">Demand</button>
+      <button type="button" id="k-supply" data-kind="supply" aria-pressed="false">Supply</button>
+      <button type="button" id="k-stock" data-kind="stock" aria-pressed="false">Existing homes</button>
+    </div>
+    <div class="seg">
+      <button type="button" id="t-fixes" aria-pressed="false">Show fixes</button>
+      <button type="button" id="t-fit">Fit to screen</button>
+    </div>
+    <div class="legend">
+      <span><svg width="28" height="8"><path d="M0 4H28" stroke="rgba(27,23,18,.4)" stroke-width="2"/></svg>pushes up</span>
+      <span><svg width="28" height="8"><path d="M0 4H28" stroke="rgba(27,23,18,.4)" stroke-width="1.6" stroke-dasharray="5 4"/></svg>feedback loop</span>
+      <span><svg width="28" height="8"><path d="M0 4H28" stroke="#1F8A5B" stroke-width="1.6" stroke-dasharray="4 3"/></svg>fix acts on</span>
+    </div>
+  </div>
+
+  <div class="stage">
+    <svg id="canvas" role="img" aria-label="Network of causes and effects in Europe's housing crisis"></svg>
+    <div class="hint">Drag to pan · scroll or pinch to zoom · click a box to trace it</div>
+    <aside id="panel" aria-live="polite"></aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const COLS = ['Forces','Mechanisms','Cost drivers','Supply gap','Prices & rents','Where it bites','Household squeeze','Who pays','Long-run cost'];
+const KIND = {demand:'Demand', supply:'Supply', stock:'Existing homes'};
+const N = [
+ // 0 Forces
+ {id:'r_households',L:0,t:'More, smaller households',s:'Households +10.3% vs population +2% (2010–24); single adults are now 35%+ of households.',src:'L2889–2896'},
+ {id:'r_urban',L:0,t:'Jobs and people clustering in cities',s:'Urban share 75% today, projected 84% by 2050. People aged 20–34 move most.',src:'L2865–2871'},
+ {id:'r_migration',L:0,t:'Migration-driven population growth',s:'Four straight years of population growth since 2021, driven by migration; natural change is negative.',src:'L2796–2800'},
+ {id:'r_remote',L:0,t:'Remote work and pandemic preferences',s:'Teleworking and pandemic-era shifts pushed prices further from incomes.',src:'L2680–2683'},
+ {id:'r_wealth',L:0,t:'Wealth of older homeowners',s:'Owners with paid-off homes use their equity to buy second and third dwellings.',src:'L2097–2101'},
+ {id:'r_lowrates',L:0,t:'A decade of near-zero rates',s:'Cheap borrowing boosted mortgage demand; prices rose ~6% a year by 2022.',src:'L2697–2700'},
+ {id:'r_ratehike',L:0,t:'The 2022 rate shock',s:'Rate hikes from late 2021 cut borrowing capacity and new mortgage lending.',src:'L1056–1076, L2701–2705'},
+ {id:'r_gfc',L:0,t:'The 2008 crash',s:'Housing investment peaked in 2007; building permits collapsed between 2007 and 2013.',src:'L215–216, L4178–4179'},
+ {id:'r_shocks',L:0,t:'Pandemic and energy shocks',s:'Supply-chain disruption, then energy prices after Russia’s invasion of Ukraine.',src:'L3817–3821, L3900–3906'},
+ {id:'r_ageing',L:0,t:'Ageing population',s:'21.6% of people were 65+ in 2024, up from 18.7% in 2014.',src:'L2929–2930'},
+ {id:'r_tourism',L:0,t:'Tourism and booking platforms',s:'854 million short-term-rental guest nights in 2024, +93% on 2018.',src:'L3106–3107'},
+ {id:'r_students',L:0,t:'Student mobility',s:'Growing student numbers in some university cities raise local rents.',src:'L2913–2919'},
+ // 1 Mechanisms
+ {id:'m_cities',L:1,k:'demand',hub:1,t:'More households chasing the same cities',s:'Housing need is concentrated in regions home to about a quarter of the EU population.',src:'L3649–3650'},
+ {id:'m_credit',L:1,k:'demand',t:'Easy mortgage credit',s:'Mortgages fund most purchases; loan-to-value caps in 22 countries kept credit from becoming a bubble.',src:'L2694–2697, L2776–2779'},
+ {id:'m_borrow',L:1,k:'demand',t:'Smaller loans for the same income',s:'Higher rates cut how much households can borrow; affordability fell in almost every EU country.',src:'L1061–1066'},
+ {id:'m_taxbias',L:1,k:'demand',t:'Tax breaks for owners',s:'Mortgage-interest relief costs up to 1.3% of GDP in the Netherlands.',src:'L2450–2456, L2964–2968'},
+ {id:'m_subsidies',L:1,k:'demand',t:'Buyer subsidies',s:'Help-to-buy, shared equity and guarantees lift prices where supply can’t respond.',src:'L3010–3016'},
+ {id:'m_investors',L:1,k:'demand',t:'Institutional investors',s:'Institutional investment in housing tripled over 2012–20, mostly in big cities. Causality is debated.',src:'L3025–3060'},
+ {id:'m_goldenvisa',L:1,k:'demand',t:'Golden visas',s:'Residence-for-property schemes “artificially fuel housing demand”.',src:'L3096–3102'},
+ {id:'m_second',L:1,k:'demand',t:'Second homes and wealth-driven buying',s:'Visible in hot spots like Southern Spain and coastal Croatia.',src:'L2685–2692'},
+ {id:'m_invest',L:1,k:'supply',hub:1,t:'Building capacity lost after 2008',s:'Housing investment recovered by 2022, then fell again in 2022–24 as costs and rates rose.',src:'L3309–3330'},
+ {id:'m_public',L:1,k:'supply',t:'Public and social building in retreat',s:'Public residential investment: €7bn, 0.04% of GDP. Social housing is 6–7% of the stock.',src:'L2330–2331, L2364–2365'},
+ {id:'m_permits',L:1,k:'supply',t:'Slow, fragmented permitting',s:'Belgium: 2 years 5 months to 6 years 5 months for a 20+ unit project. Understaffed offices add delay.',src:'L4174–4175, L4285–4290'},
+ {id:'m_rules',L:1,k:'supply',t:'Layers of local building rules',s:'Parking minimums, even where the mailbox goes. In Poland, national extras add up to 15% to budgets.',src:'L355, L4230–4265'},
+ {id:'m_zoning',L:1,k:'supply',t:'Restrictive zoning and height limits',s:'Land-use rules, coastal limits and monument protection cap density in metro areas.',src:'L3716–3720, L4450–4453'},
+ {id:'m_land',L:1,k:'supply',t:'Little buildable land where demand is',s:'Only 3% of EU land is residential, and cities have the least room to expand.',src:'L4477–4480'},
+ {id:'m_materials',L:1,k:'supply',t:'Materials price spike',s:'Since 2021: bricks and tiles +41%, plaster +36%, concrete +26%.',src:'L3898–3906'},
+ {id:'m_labour',L:1,k:'supply',t:'Skilled-worker shortage',s:'Shortages three times higher than a decade ago; 4.2 million openings to fill by 2035.',src:'L3939–3941, L3958'},
+ {id:'m_productivity',L:1,k:'supply',t:'Stagnant construction productivity',s:'Output per hour −8.5% since 2019, the worst of any sector. 75% of firms don’t innovate.',src:'L3814–3816, L4001'},
+ {id:'m_infra',L:1,k:'supply',t:'Grid and transport bottlenecks',s:'Grid congestion in the Netherlands is delaying new housing; poor transport keeps cheaper areas out of reach.',src:'L5241–5244, L5275–5278'},
+ {id:'m_vacancy',L:1,k:'stock',t:'Empty and underused homes',s:'~20% of dwellings unoccupied, up from 17.3% to 19.4% (2011–21). 9.7% of offices vacant.',src:'L4549–4561'},
+ {id:'m_str',L:1,k:'stock',t:'Homes turned into short-term rentals',s:'1.2% of homes EU-wide but up to 20% in hotspots. Professional hosts hold 45%+ of listings.',src:'L3149–3155, L3245–3248'},
+ {id:'m_lockin',L:1,k:'stock',t:'Tenants and owners locked in place',s:'New rents are 48% above sitting rents in Germany’s seven biggest cities, so people don’t move.',src:'L1482–1497'},
+ {id:'m_underocc',L:1,k:'stock',t:'Homes too big for who lives there',s:'Older households stay in large homes as multi-generational living fades.',src:'L2925–2935'},
+ {id:'m_rentexit',L:1,k:'stock',t:'Landlords leaving the rental market',s:'Netherlands: tenants at market rent −27 points as rules tightened.',src:'L706–711'},
+ {id:'m_shallow',L:1,k:'stock',t:'Tiny rental markets',s:'Ownership tops 90% in Romania, Slovakia, Hungary and Croatia, leaving little to rent.',src:'L713–716, L1435–1437'},
+ {id:'m_quality',L:1,k:'stock',t:'Old, poorly insulated homes',s:'About 67% of residential floor area was built before 1990.',src:'L4979, L4988'},
+ // 2 Cost drivers
+ {id:'c_land',L:2,hub:1,t:'Land cost',s:'Rising land prices explain 84% of house-price growth in 14 OECD countries, 1950–2012.',src:'L4469–4471'},
+ {id:'c_build',L:2,hub:1,t:'Construction cost',s:'New-build producer prices +22.7% from end-2020 to end-2024.',src:'L3846–3847'},
+ {id:'c_time',L:2,t:'Cost of delay',s:'Long permitting adds about 16.5% to residential construction costs (Prague study).',src:'L4316–4318'},
+ {id:'c_finance',L:2,t:'Financing cost',s:'Delays stretch loans; banks shy away from projects with uncertain timelines.',src:'L4329–4335'},
+ {id:'c_tax',L:2,t:'Transaction taxes and fees',s:'Transfer taxes, notary and agent fees add to purchase costs and reduce mobility.',src:'L127–128, L2959–2962'},
+ {id:'c_energy',L:2,t:'Energy and running costs',s:'42 million Europeans can’t keep their homes warm enough.',src:'L448, L167–171'},
+ // 3 Supply gap
+ {id:'o_inelastic',L:3,hub:1,t:'Supply can’t respond to demand',s:'Supply elasticity is 0.2–0.4 in metros (Netherlands 0.19, Italy 0.26), so extra demand becomes higher prices.',src:'L3711–3721, L3294–3297'},
+ {id:'o_shortfall',L:3,hub:1,t:'Too few new homes built',s:'1.6m homes a year built; 650,000 more needed (€150bn a year). Permits −22% since 2021.',src:'L198–203'},
+ {id:'o_avail',L:3,hub:1,t:'Too few homes on the market',s:'Rentals are “not only unaffordable but sometimes simply not available”.',src:'L126–128'},
+ // 4 Prices & rents
+ {id:'o_prices',L:4,hub:1,t:'House prices',s:'+61% over 2010–25 at EU level; overvalued by about 25% in Portugal.',src:'L1758, L1110–1111'},
+ {id:'o_rents',L:4,hub:1,t:'Rents on new contracts',s:'New rents in EU capitals +36% (2013–23) vs inflation +30%; far above sitting rents.',src:'L1462–1464'},
+ // 5 Where it bites
+ {id:'g_capitals',L:5,place:1,t:'Capital cities',s:'In 22 capitals, a third of income buys under 50 m². Budapest 14.7 m², Copenhagen 26.4 m².',src:'L1273–1280'},
+ {id:'g_growth',L:5,place:1,t:'Booming non-capital cities',s:'Munich, Frankfurt, Hamburg, Barcelona, Milan and Kraków can top their capitals.',src:'L1240–1245'},
+ {id:'g_tourist',L:5,place:1,t:'Tourist coasts and historic centres',s:'Affordability is low on coasts; STRs reach 20% of homes in some centres.',src:'L1215–1216, L3153'},
+ {id:'g_alpine',L:5,place:1,t:'Alpine regions',s:'Among the least affordable places to buy in the EU.',src:'L1215–1216'},
+ {id:'g_university',L:5,place:1,t:'University cities',s:'Student demand raises rents near campuses; 3.3m affordable student homes short.',src:'L1953, L2913–2919'},
+ {id:'g_suburbs',L:5,place:1,t:'Commuter belts',s:'Price pressure spills from cities into the suburbs around them.',src:'L2869–2870'},
+ {id:'g_cee',L:5,place:1,t:'Central and Eastern Europe',s:'Rents since 2010: Estonia +223%, Lithuania +191%, Hungary +126%.',src:'L1760–1761, L1213–1215'},
+ {id:'g_rural',L:5,place:1,t:'Shrinking rural areas (the opposite problem)',s:'Falling prices and a downward spiral of investment in services.',src:'L456–458'},
+ // 6 Household squeeze
+ {id:'h_burden',L:6,hub:1,t:'Housing eats the budget',s:'Low-income households spend 37% of income on housing, vs 16% for high earners.',src:'L2177–2178'},
+ {id:'h_overcrowd',L:6,t:'Overcrowding',s:'16.9% of people overall; 28% in the poorest fifth; above 40% in Romania and Latvia.',src:'L1636–1642, L1708–1709'},
+ {id:'h_insecure',L:6,t:'Fear of losing your home',s:'6% feared having to leave within three months (2020–22), up from 1%.',src:'L1999–2001'},
+ {id:'h_late',L:6,t:'Living with parents for longer',s:'Almost half of 18–34-year-olds live with their parents.',src:'L2069–2070'},
+ {id:'h_stuck',L:6,t:'Can’t move for a better job',s:'High prices and new rents deter moves to dynamic regions.',src:'L2276–2281'},
+ // 7 Who pays
+ {id:'w_young',L:7,t:'Young people',s:'Ownership among 25–35s down 16.3% since 2007.',src:'L2091–2092'},
+ {id:'w_newcomers',L:7,t:'First-time buyers and new tenants',s:'They “face the full brunt”; long-time owners and old contracts are shielded.',src:'L135–145'},
+ {id:'w_lowincome',L:7,t:'Low-income households',s:'Housing-cost overburden: 31.1% for those at risk of poverty vs 3.8% for others.',src:'L1621–1622'},
+ {id:'w_essential',L:7,t:'Essential and seasonal workers',s:'Teachers, nurses, police priced out; 650,000–850,000 seasonal workers face poor housing.',src:'L447, L1869–1873'},
+ {id:'w_students',L:7,t:'Students',s:'Young people of limited means drop out of higher education or start work early.',src:'L449–452'},
+ {id:'w_homeless',L:7,t:'Homeless people',s:'More than 1 million, including 400,000 children. In Flanders, 1 in 6 evictions ends in homelessness.',src:'L446, L2054–2057'},
+ {id:'w_owners',L:7,gain:1,t:'Existing owners (they gain)',s:'Rising prices boost homeowners’ wealth.',src:'L2187–2191'},
+ {id:'w_ruralowners',L:7,t:'Owners in shrinking regions',s:'Their homes lose value, leaving less for retirement.',src:'L2184–2186'},
+ // 8 Long-run cost
+ {id:'x_wealth',L:8,hub:1,t:'A wider housing-wealth gap',s:'Children of owners become owners; the gap grows across and within generations.',src:'L2087–2106'},
+ {id:'x_fertility',L:8,t:'Later, fewer children',s:'Rising house prices are linked to lower fertility, especially among renters.',src:'L2064–2068'},
+ {id:'x_growth',L:8,t:'Lower productivity and growth',s:'Workers can’t reach the most productive cities; agglomeration benefits are lost.',src:'L2275–2291'},
+ {id:'x_demand',L:8,t:'Weaker consumer spending',s:'Income shifts from households who spend it to households who save it.',src:'L2197–2200'},
+ {id:'x_health',L:8,t:'Poverty and poorer health',s:'Damp, cold and crowding harm health; 18% of children live with leaks, damp or mould.',src:'L4936, L1802–1837'}
+];
+// [from, to, note, weight(1-3), flag]  flag: 'fb' feedback loop
+const E = [
+ ['r_households','m_cities','More households than people: each needs its own home',3],
+ ['r_urban','m_cities','Jobs and young adults concentrate in growth poles',3],
+ ['r_migration','m_cities','Population growth lands mostly in cities',2],
+ ['r_urban','g_rural','People leave rural areas'],
+ ['r_urban','g_suburbs','Families move to the outskirts for space'],
+ ['r_remote','o_prices','Pandemic-era demand pushed prices beyond incomes'],
+ ['r_remote','g_suburbs','Demand for bigger homes further out'],
+ ['r_wealth','m_second','Equity funds second and third homes'],
+ ['r_lowrates','m_credit','Cheap money, bigger mortgages',2],
+ ['r_lowrates','m_investors','Search for yield drew investors into housing'],
+ ['r_ratehike','m_borrow','Same income now borrows less',2],
+ ['r_ratehike','c_finance','Developers pay more to borrow'],
+ ['r_gfc','m_invest','Construction bust; capacity never fully rebuilt',2],
+ ['r_shocks','m_materials','Energy-intensive materials jumped in price',2],
+ ['r_shocks','m_labour','Shortages acute since the pandemic'],
+ ['r_shocks','m_productivity','Disruption cut output per hour'],
+ ['r_shocks','c_energy','Energy bills rose for households'],
+ ['r_ageing','m_underocc','Older people stay in family-sized homes',2],
+ ['r_tourism','m_str','Platforms turn homes into tourist lets',2],
+ ['r_tourism','g_tourist','Visitor demand concentrates on coasts and old towns'],
+ ['r_students','g_university','Student demand concentrates near campuses',2],
+
+ ['m_cities','o_prices','Demand meets fixed supply in the same places',3],
+ ['m_cities','o_rents','Newcomers compete for the few vacant flats',3],
+ ['m_cities','c_land','Location value rises with demand',2],
+ ['m_credit','o_prices','More borrowing power bids up prices',2],
+ ['m_borrow','w_newcomers','Buyers face high prices and dear mortgages at once',2],
+ ['m_borrow','m_invest','Households cut housing investment in 2023','1','fb'],
+ ['m_taxbias','o_prices','Favourable tax treatment raises demand'],
+ ['m_taxbias','m_second','Tax treatment favours buying more homes','1','fb'],
+ ['m_subsidies','o_prices','Subsidies capitalise into prices when supply is stuck',2],
+ ['m_investors','o_prices','May have pushed prices away from fundamentals'],
+ ['m_investors','o_rents','Professional landlords in big cities'],
+ ['m_investors','g_capitals','Concentrated in major cities'],
+ ['m_goldenvisa','o_prices','Extra demand, mainly at the top end'],
+ ['m_second','m_vacancy','Seasonal homes sit empty most of the year','1','fb'],
+ ['m_second','g_tourist','Wealth flows into hot spots'],
+ ['m_invest','o_shortfall','Investment fell 2022–24; permits at historic lows',3],
+ ['m_public','o_shortfall','Little public building to fill the gap',2],
+ ['m_public','w_lowincome','Social housing waiting lists grow'],
+ ['m_permits','c_time','Years of waiting add cost',2],
+ ['m_permits','c_finance','Uncertain timelines make loans dearer'],
+ ['m_permits','o_inelastic','Supply can’t react quickly',2],
+ ['m_rules','c_build','Extra standards raise build costs',2],
+ ['m_rules','c_time','More compliance, more delay'],
+ ['m_zoning','o_inelastic','Caps on density block new supply',2],
+ ['m_zoning','c_land','Less buildable land means pricier land'],
+ ['m_land','c_land','Scarce land where demand is',3],
+ ['m_land','o_inelastic','No room to grow in metros'],
+ ['m_materials','c_build','Materials are 30–40% of build cost',2],
+ ['m_labour','c_build','Scarce trades push up wages and timelines',2],
+ ['m_labour','o_shortfall','Not enough hands to build'],
+ ['m_productivity','c_build','Each home takes more hours',2],
+ ['m_productivity','o_inelastic','Industry can’t scale up output'],
+ ['m_infra','c_time','Projects wait for grid connections'],
+ ['m_infra','g_rural','Poorly connected areas stay unattractive'],
+ ['m_vacancy','o_avail','Homes exist but aren’t lived in',2],
+ ['m_str','o_avail','Long-term rentals become tourist lets',2],
+ ['m_str','o_prices','Correlation is strongest for sale prices'],
+ ['m_lockin','o_avail','Fewer moves, fewer vacancies',2],
+ ['m_underocc','o_avail','Space locked in large homes'],
+ ['m_rentexit','o_avail','Fewer homes offered to rent',2],
+ ['m_rentexit','m_vacancy','Owners wary of the rules keep homes empty','1','fb'],
+ ['m_shallow','g_cee','Shallow rental markets amplify rent rises'],
+ ['m_shallow','o_rents','Few rentals for many seekers'],
+ ['m_quality','c_energy','Poor insulation means high bills',2],
+ ['m_quality','x_health','Damp, mould and cold harm health'],
+
+ ['c_land','o_prices','Land is most of the price of a home',3],
+ ['c_land','o_shortfall','Projects stop paying off'],
+ ['c_build','o_shortfall','Higher costs cancel projects',2],
+ ['c_build','o_prices','New homes cost more to deliver',2],
+ ['c_time','o_shortfall','Delays shrink and postpone supply',2],
+ ['c_finance','o_shortfall','Financing gets harder for developers'],
+ ['c_tax','h_stuck','Transaction taxes discourage moving'],
+ ['c_energy','h_burden','Energy is part of housing costs',2],
+
+ ['o_inelastic','o_prices','Demand shows up as price, not new homes',3],
+ ['o_inelastic','o_rents','Same for rents',2],
+ ['o_shortfall','o_prices','Supply hasn’t kept up with demand',3],
+ ['o_shortfall','o_rents','Shortage pushes up new rents',3],
+ ['o_avail','o_rents','Few listings, high asking rents',2],
+ ['o_avail','h_overcrowd','People squeeze into what they can find'],
+ ['o_avail','h_late','Young adults can’t find a first place'],
+ ['o_rents','m_lockin','Bigger gap between new and old rents, so even fewer moves',2,'fb'],
+
+ ['o_prices','g_capitals','Capital premiums vs national averages',3],
+ ['o_prices','g_growth','Growth-pole prices can exceed capitals',2],
+ ['o_prices','g_tourist','Coastal and resort prices'],
+ ['o_prices','g_alpine','Alpine prices'],
+ ['o_prices','g_suburbs','Spill-over into commuter belts'],
+ ['o_prices','w_owners','Existing owners gain on paper',2],
+ ['o_prices','w_newcomers','First-time buyers face the full increase',3],
+ ['o_prices','h_late','Ownership delayed'],
+ ['o_rents','g_capitals','Least rental affordability in Paris, Madrid, Warsaw, Athens, Lisbon',3],
+ ['o_rents','g_growth','Metro rents far above sitting rents'],
+ ['o_rents','g_university','Student rents near campuses'],
+ ['o_rents','g_cee','Fastest rent growth since 2010'],
+ ['o_rents','h_burden','New contracts eat more income',3],
+ ['o_rents','h_insecure','Tenants fear they can’t afford to stay',2],
+
+ ['g_capitals','w_essential','Key workers can’t live where they work',2],
+ ['g_capitals','w_young','Young people priced out of opportunity hubs',2],
+ ['g_capitals','h_stuck','Too expensive to move to'],
+ ['g_growth','h_stuck','Too expensive to move to',2],
+ ['g_growth','x_growth','Agglomeration benefits lost'],
+ ['g_tourist','w_essential','Seasonal and tourism workers'],
+ ['g_university','w_students','Students priced out',2],
+ ['g_cee','h_overcrowd','Overcrowding above 40% in Romania and Latvia',2],
+ ['g_rural','w_ruralowners','Homes lose value'],
+ ['g_rural','m_vacancy','Empty homes in the wrong places','1','fb'],
+ ['g_suburbs','w_young','Young families pushed further out'],
+
+ ['h_burden','w_lowincome','Low-income households pay the biggest share',3],
+ ['h_burden','x_demand','Less left for everything else'],
+ ['h_overcrowd','w_young','3 in 10 people aged 16–29 live overcrowded',2],
+ ['h_overcrowd','w_lowincome','28% of the poorest fifth'],
+ ['h_insecure','w_homeless','Evictions can end in homelessness',2],
+ ['h_late','w_young','Leaving home later',2],
+ ['h_stuck','x_growth','Labour can’t move to productive regions',2],
+
+ ['w_young','x_fertility','Delayed or fewer children',2],
+ ['w_young','x_wealth','Locked out of wealth building',2],
+ ['w_newcomers','x_wealth','Late entrants miss the gains',2],
+ ['w_owners','x_wealth','Insiders’ wealth grows',2],
+ ['w_lowincome','x_wealth','Tenants can’t build assets for retirement'],
+ ['w_lowincome','x_health','Poverty and worse living conditions',2],
+ ['w_essential','x_growth','Labour shortages in essential services'],
+ ['w_students','x_growth','Fewer graduates, less innovation'],
+ ['w_homeless','x_health','Health and life chances damaged',2],
+ ['w_ruralowners','x_wealth','Housing wealth diverges by region']
+].map(e=>({a:e[0],b:e[1],note:e[2]||'',w:+e[3]||1,fb:e[4]==='fb'}));
+
+const F = [
+ {id:'f_digital',t:'Digital permits with deadlines',sp:'M',to:['m_permits'],s:'Estonia and Finland are close to fully digital permitting.',src:'L4362–4367'},
+ {id:'f_goldplate',t:'Strip gold-plated local rules',sp:'M',to:['m_rules'],s:'Cut requirements that go beyond EU law.',src:'L4230–4269'},
+ {id:'f_modular',t:'Modular and offsite building',sp:'M',to:['m_productivity','c_build'],s:'Up to 60% faster and about 20% cheaper.',src:'L4029–4044'},
+ {id:'f_skills',t:'Train and recognise workers',sp:'M',to:['m_labour'],s:'4.2 million construction job openings by 2035.',src:'L3958'},
+ {id:'f_land',t:'Brownfield, density, mixed zoning',sp:'S',to:['m_land','m_zoning'],s:'Build up and in where demand already is.',src:'L3648–3658, L4447–4453'},
+ {id:'f_infra',t:'Transport, broadband and grid',sp:'S',to:['m_infra','g_rural'],s:'Makes cheaper regions viable and relieves cities.',src:'L207–210'},
+ {id:'f_vacancy',t:'Tax homes kept empty',sp:'F',to:['m_vacancy'],s:'France’s 1999 vacancy tax brought empty units back into use.',src:'L3006–3009, L3033–3036'},
+ {id:'f_str',t:'Register and cap short-term rentals',sp:'F',to:['m_str'],s:'EU registration rules apply from May 2026.',src:'L3254–3265'},
+ {id:'f_convert',t:'Convert offices, renovate vacant homes',sp:'M',to:['m_vacancy','o_shortfall'],s:'9.7% of offices are vacant.',src:'L4529–4549'},
+ {id:'f_downsize',t:'Help downsizing, split large homes',sp:'M',to:['m_underocc','m_lockin'],s:'Matches big homes to smaller households.',src:'L4533–4537'},
+ {id:'f_rentrules',t:'Rental rules that keep landlords renting',sp:'M',to:['m_rentexit','m_shallow'],s:'A strong, protected rental sector stabilises prices.',src:'L2229–2234'},
+ {id:'f_proptax',t:'Shift from transaction to property taxes',sp:'M',to:['c_tax','m_taxbias'],s:'Recurrent property taxes distort the least.',src:'L2959–2964'},
+ {id:'f_funding',t:'Fill the €150bn-a-year gap',sp:'M',to:['m_invest','m_public'],s:'EU funds, EIB and private capital; RRF has €19.6bn for housing.',src:'L3418–3419, L3588–3591'},
+ {id:'f_social',t:'Social and cooperative housing',sp:'S',to:['m_public','w_lowincome'],s:'Above 20% of stock only in NL, AT and DK.',src:'L2359–2368'},
+ {id:'f_nogv',t:'End golden visas',sp:'F',to:['m_goldenvisa'],s:'Spain has scrapped its scheme.',src:'L3101–3102'},
+ {id:'f_ltv',t:'Loan-to-value caps',sp:'F',to:['m_credit'],s:'In force in 22 countries.',src:'L2776–2780'},
+ {id:'f_nosub',t:'Phase out buyer subsidies and mortgage relief',sp:'M',to:['m_subsidies','m_taxbias'],s:'Both push prices up when supply is stuck.',src:'L2450–2462, L3010–3016'},
+ {id:'f_allow',t:'Targeted housing allowances',sp:'F',to:['h_burden'],s:'€63bn in 2023; cut the poverty rate by 1.4 points.',src:'L2388–2408'},
+ {id:'f_hf',t:'Housing First, eviction prevention',sp:'F',to:['w_homeless','h_insecure'],s:'Get people housed first.',src:'L6131–6142'},
+ {id:'f_student',t:'Student housing',sp:'M',to:['w_students'],s:'Close the 3.3 million-home gap.',src:'L1953'},
+ {id:'f_reno',t:'Energy renovation',sp:'M',to:['m_quality','c_energy'],s:'Every €1 invested saves €12 on energy.',src:'L400, L4885'},
+ {id:'f_mix',t:'Mixed-income homes near jobs',sp:'M',to:['w_essential'],s:'Not cheap homes in places with no services.',src:'L184–193'}
+];
+
+// ---------- layout ----------
+const W = 196, PITCH = 262, PADX = 30, TOP = 70, GAP = 12;
+const byId = {}; N.forEach(n=>{ byId[n.id]=n; n.out=[]; n.inn=[]; n.fixes=[]; });
+E.forEach(e=>{ byId[e.a].out.push(e); byId[e.b].inn.push(e); });
+F.forEach(f=>f.to.forEach(t=>byId[t].fixes.push(f)));
+function wrap(text, max){ const words=text.split(' '); const lines=[]; let cur='';
+  words.forEach(w=>{ if((cur+' '+w).trim().length>max && cur){ lines.push(cur); cur=w; } else cur=(cur+' '+w).trim(); }); if(cur) lines.push(cur); return lines; }
+N.forEach(n=>{ n.lines = wrap(n.t, 27); n.h = 14 + n.lines.length*15 + (n.k?12:0); n.x = PADX + n.L*PITCH; });
+const cols = COLS.map((_,i)=>N.filter(n=>n.L===i));
+const fwd = E.filter(e=>!e.fb);
+const cy = n => n.y + n.h/2;
+const kindOrder = {demand:0,supply:1,stock:2};
+const kgap = (a,b)=> (a&&b&&a.k&&b.k&&a.k!==b.k) ? 22 : 0;
+// 1) ordering by barycentre of neighbour positions (normalised index)
+const pos = n => { const c=cols[n.L]; return c.length>1 ? c.indexOf(n)/(c.length-1) : .5; };
+for (let it=0; it<12; it++){
+  const down = it%2===0;
+  (down ? cols.slice(1) : cols.slice(0,-1).reverse()).forEach(col=>{
+    col.forEach(n=>{
+      const nb = (down ? fwd.filter(e=>e.b===n.id).map(e=>byId[e.a]) : fwd.filter(e=>e.a===n.id).map(e=>byId[e.b]));
+      const all = fwd.filter(e=>e.a===n.id||e.b===n.id).map(e=>byId[e.a===n.id?e.b:e.a]);
+      const use = nb.length?nb:all;
+      n.bc = use.length ? use.reduce((s,m)=>s+pos(m),0)/use.length : pos(n);
+    });
+    col.sort((a,b)=> (a.k&&b.k&&a.k!==b.k) ? kindOrder[a.k]-kindOrder[b.k] : a.bc-b.bc);
+  });
+}
+// 2) placement inside a fixed band [TOP, TOP+maxH]
+const stackH = col => col.reduce((s,n,i)=>s+n.h+(i?GAP+kgap(col[i-1],n):0),0);
+const maxH = Math.max(...cols.map(stackH));
+function place(col, wantFn){
+  col.forEach(n=>n.w8=wantFn(n)); col.sort((a,b)=>a.w8-b.w8);
+  // top-down and bottom-up passes, then average for a balanced fit
+  const down=[], up=[];
+  col.forEach((n,i)=>{ const min = i? down[i-1]+col[i-1].h+GAP : TOP; down[i]=Math.max(min,n.w8); });
+  for(let i=col.length-1;i>=0;i--){ const max = i<col.length-1 ? up[i+1]-GAP-col[i].h : TOP+maxH-col[i].h; up[i]=Math.min(max,col[i].w8); }
+  col.forEach((n,i)=>n.y=(down[i]+up[i])/2);
+  for(let i=1;i<col.length;i++){ const min=col[i-1].y+col[i-1].h+GAP; if(col[i].y<min) col[i].y=min; }
+  wantFn = n=>n.y;
+  let y=TOP; col.forEach((n,i)=>{ const min = i? col[i-1].y+col[i-1].h+GAP+kgap(col[i-1],n) : TOP; n.y=Math.max(min, wantFn(n)); });
+  let lim=TOP+maxH; for(let i=col.length-1;i>=0;i--){ const n=col[i]; if(n.y+n.h>lim) n.y=lim-n.h; lim=n.y-GAP-(i?kgap(col[i-1],n):0); }
+}
+cols.forEach(col=>{ const off=(maxH-stackH(col))/2; let y=TOP+off; col.forEach((n,i)=>{ if(i) y+=GAP+kgap(col[i-1],n); n.y=y; y+=n.h; }); });
+for (let it=0; it<8; it++){
+  cols.forEach((col,ci)=>{ if(ci===1) return;
+    place(col, n=>{ const nb = fwd.filter(e=>e.a===n.id||e.b===n.id).map(e=>byId[e.a===n.id?e.b:e.a]);
+      return nb.length ? nb.reduce((s,m)=>s+cy(m),0)/nb.length - n.h/2 : n.y; });
+  });
+}
+const graphH = Math.max(...N.map(n=>n.y+n.h));
+const graphW = PADX*2 + (COLS.length-1)*PITCH + W;
+// fixes band
+const FIXY = graphH + 110, FW = 178;
+F.forEach(f=>{ f.lines = wrap(f.t, 24); f.h = 14 + f.lines.length*15; const xs=f.to.map(t=>byId[t].x+W/2); f.want = xs.reduce((a,b)=>a+b,0)/xs.length - FW/2; });
+const fsorted = [...F].sort((a,b)=>a.want-b.want);
+const rows=[[],[]]; fsorted.forEach((f,i)=>rows[i%2].push(f));
+rows.forEach((row,ri)=>{ let x=PADX; row.forEach(f=>{ f.x=Math.max(x,f.want); x=f.x+FW+14; });
+  for(let i=row.length-1;i>=0;i--){ const lim = (i===row.length-1? graphW-PADX : row[i+1].x-14) - FW; if(row[i].x>lim) row[i].x=lim; }
+  row.forEach(f=>f.y = FIXY + ri*62); });
+const fullH = FIXY + 140;
+
+// ---------- render ----------
+const svg = d3.select('#canvas');
+const root = svg.append('g');
+const gCols = root.append('g'), gEdges = root.append('g'), gFixE = root.append('g').attr('id','fixlayer'), gNodes = root.append('g'), gFix = root.append('g').attr('id','fixnodes');
+COLS.forEach((c,i)=>{
+  const x = PADX + i*PITCH;
+  gCols.append('text').attr('class','colnum').attr('x',x).attr('y',30).text(String(i+1).padStart(2,'0'));
+  gCols.append('text').attr('class','colhead').attr('x',x+34).attr('y',28).text(c);
+  gCols.append('line').attr('class','colline').attr('x1',x).attr('x2',x+W).attr('y1',42).attr('y2',42);
+});
+function edgePath(e){
+  const A=byId[e.a], B=byId[e.b];
+  if(!e.fb){ const x1=A.x+W, y1=cy(A), x2=B.x, y2=cy(B), dx=Math.max(40,(x2-x1)*.5); return `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`; }
+  // feedback: leave from bottom of source, loop under, enter bottom of target
+  const x1=A.x+W/2, y1=A.y+A.h, x2=B.x+W/2, y2=B.y+B.h, sag=Math.max(y1,y2)+60+Math.abs(x1-x2)*.08;
+  return `M${x1},${y1} C${x1},${sag} ${x2},${sag} ${x2},${y2}`;
+}
+const edgeSel = gEdges.selectAll('path').data(E).join('path')
+  .attr('class',e=>'e'+(e.w>1?' w'+e.w:'')+(e.fb?' fb':'')).attr('d',edgePath);
+edgeSel.append('title').text(e=>`${byId[e.a].t} → ${byId[e.b].t}${e.note?': '+e.note:''}`);
+const nodeSel = gNodes.selectAll('g').data(N).join('g')
+  .attr('class',n=>'node'+(n.hub?' hub':'')+(n.place?' place':'')+(n.gain?' gain':''))
+  .attr('transform',n=>`translate(${n.x},${n.y})`).attr('tabindex',0).attr('role','button').attr('aria-label',n=>n.t);
+nodeSel.append('rect').attr('width',W).attr('height',n=>n.h).attr('rx',6);
+nodeSel.each(function(n){ const g=d3.select(this); let y=17;
+  if(n.k){ g.append('text').attr('class','kind').attr('x',10).attr('y',15).text(KIND[n.k].toUpperCase()); y=29; }
+  n.lines.forEach((l,i)=>g.append('text').attr('x',10).attr('y',y+i*15).text(l)); });
+// fixes
+const fixEdges = []; F.forEach(f=>f.to.forEach(t=>fixEdges.push({f,t})));
+const fixEdgeSel = gFixE.selectAll('path').data(fixEdges).join('path').attr('class','e fx')
+  .attr('d',d=>{ const T=byId[d.t]; const x1=d.f.x+FW/2, y1=d.f.y, x2=T.x+W/2, y2=T.y+T.h; const m=(y1+y2)/2; return `M${x1},${y1} C${x1},${m} ${x2},${m+80} ${x2},${y2}`; });
+const fixSel = gFix.selectAll('g').data(F).join('g').attr('class','node fixn').attr('transform',f=>`translate(${f.x},${f.y})`).attr('tabindex',0).attr('role','button').attr('aria-label',f=>'Fix: '+f.t);
+fixSel.append('rect').attr('width',FW).attr('height',f=>f.h).attr('rx',6);
+fixSel.each(function(f){ const g=d3.select(this); f.lines.forEach((l,i)=>g.append('text').attr('x',10).attr('y',17+i*15).text(l)); });
+const fixHead = gFix.append('g');
+fixHead.append('text').attr('class','colhead').attr('x',PADX).attr('y',FIXY-26).text('Fixes named in the report · each dashed line shows what a fix acts on');
+fixHead.append('line').attr('class','colline').attr('x1',PADX).attr('x2',graphW-PADX).attr('y1',FIXY-16).attr('y2',FIXY-16);
+
+// ---------- zoom ----------
+const zoom = d3.zoom().scaleExtent([.2,3]).on('zoom',ev=>root.attr('transform',ev.transform));
+svg.call(zoom).on('dblclick.zoom',null);
+let showFixes = false;
+function fit(animate){
+  const el = document.getElementById('canvas'); const w=el.clientWidth, h=el.clientHeight; if(!w||!h) return;
+  const H = showFixes ? fullH : graphH+80;
+  const k = Math.min(w/(graphW+20), h/(H+10));
+  const t = d3.zoomIdentity.translate((w-graphW*k)/2, 6).scale(k);
+  (animate? svg.transition().duration(200):svg).call(zoom.transform, t);
+}
+
+// ---------- tracing ----------
+let selected=null, mode='both', kind=null;
+function reach(starts, dir, fb=true){ const seen=new Set(starts); const q=[...starts];
+  while(q.length){ const id=q.shift(); const n=byId[id]; if(!n) continue;
+    const next = dir==='down' ? n.out.filter(e=>fb||!e.fb).map(e=>e.b) : n.inn.filter(e=>fb||!e.fb).map(e=>e.a);
+    next.forEach(x=>{ if(!seen.has(x)){ seen.add(x); q.push(x);} }); }
+  return seen; }
+function render(){
+  const s = d3.select('#canvas');
+  let lit=null, starts=null;
+  if (selected && selected.startsWith('f_')){ const f=F.find(x=>x.id===selected); starts=f.to; lit=new Set([selected]); reach(starts,'down').forEach(x=>lit.add(x)); }
+  else if (selected){ starts=[selected]; }
+  else if (kind){ starts=N.filter(n=>n.k===kind).map(n=>n.id); }
+  if (starts && !lit){ lit=new Set();
+    const fb = !!selected;
+    if(mode!=='down') reach(starts,'up',fb).forEach(x=>lit.add(x));
+    if(mode!=='up') reach(starts,'down',fb).forEach(x=>lit.add(x)); }
+  s.classed('focus', !!lit);
+  nodeSel.classed('lit', n=>!!lit&&lit.has(n.id)).classed('sel', n=>n.id===selected);
+  fixSel.classed('lit', f=>!!lit && (f.id===selected || (!selected?.startsWith('f_') && f.to.some(t=>lit.has(t)) && showFixes))).classed('sel', f=>f.id===selected);
+  edgeSel.classed('lit', e=>!!lit && lit.has(e.a) && lit.has(e.b) && (!!selected || !e.fb));
+  fixEdgeSel.classed('lit', d=>!!lit && (d.f.id===selected || (selected && !selected.startsWith('f_') && lit.has(d.t))));
+  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.mode===mode)));
+  document.querySelectorAll('[data-kind]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.kind===kind)));
+  document.getElementById('t-fixes').setAttribute('aria-pressed', String(showFixes));
+  d3.select('#fixlayer').attr('display', showFixes?null:'none'); d3.select('#fixnodes').attr('display', showFixes?null:'none');
+  panel();
+}
+function li(id, note, isFix){
+  const n = isFix ? F.find(f=>f.id===id) : byId[id];
+  const sp = isFix ? `<span class="speed ${n.sp}">${{F:'Fast',M:'Medium',S:'Slow'}[n.sp]}</span>` : '';
+  return `<li class="${isFix?'fix':''}"><button type="button" data-go="${id}">${n.t}${sp}${note?`<small>${note}</small>`:''}</button></li>`;
+}
+function panel(){
+  const p = document.getElementById('panel');
+  if (!selected){
+    p.innerHTML = `<div class="intro"><div class="k">How to read this</div><h2>${N.length} parts, ${E.length} links</h2>
+      <p>Each box is one piece of the crisis. Each line says the box on the left pushes up the one on the right. Thicker lines are the links the report treats as main drivers.</p>
+      <ol><li>Click any box to light up everything that causes it and everything it leads to.</li>
+      <li>Use <b>Follow</b> to trace all demand, supply or existing-home pressures at once.</li>
+      <li>Turn on <b>Show fixes</b> to see where each policy steps in.</li></ol>
+      <p style="margin-top:14px">Dashed lines are feedback loops: rising new rents lock tenants in, which makes even fewer homes available.</p>
+      <p class="src">Source: European Commission, Understanding the housing crisis, SWD(2025) 1053, Dec 2025. Line references point to the text version in the issue folder.</p></div>`;
+  } else if (selected.startsWith('f_')){
+    const f = F.find(x=>x.id===selected);
+    p.innerHTML = `<div class="k">Fix · ${{F:'Fast',M:'Medium',S:'Slow'}[f.sp]}</div><h2>${f.t}</h2><p class="stat">${f.s}</p><p class="src">SWD ${f.src}</p>
+      <h3>Acts on</h3><ul>${f.to.map(t=>li(t)).join('')}</ul>`;
+  } else {
+    const n = byId[selected];
+    const ins = n.inn.map(e=>li(e.a, e.note+(e.fb?' (feedback loop)':''))).join('');
+    const outs = n.out.map(e=>li(e.b, e.note+(e.fb?' (feedback loop)':''))).join('');
+    const fx = n.fixes.map(f=>li(f.id, f.s, true)).join('');
+    p.innerHTML = `<div class="k">${String(n.L+1).padStart(2,'0')} · ${COLS[n.L]}${n.k?' · '+KIND[n.k]:''}</div><h2>${n.t}</h2>
+      <p class="stat">${n.s}</p><p class="src">SWD ${n.src}</p>
+      <h3>Driven by</h3>${ins?`<ul>${ins}</ul>`:'<p class="empty">A starting force.</p>'}
+      <h3>Leads to</h3>${outs?`<ul>${outs}</ul>`:'<p class="empty">An end result.</p>'}
+      <h3>Fixes that act here</h3>${fx?`<ul>${fx}</ul>`:'<p class="empty">None directly. Look further upstream.</p>'}`;
+  }
+  p.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{ const id=b.dataset.go; if(id.startsWith('f_') && !showFixes){ showFixes=true; } select(id, true); }));
+}
+function select(id, center){
+  selected = (selected===id && !center) ? null : id; kind=null; render();
+  if (center && selected){ const n = byId[id] || F.find(f=>f.id===id); const el=document.getElementById('canvas');
+    const t = d3.zoomTransform(el); const k=Math.max(t.k,.75); const w = id.startsWith('f_')?FW:W;
+    svg.transition().duration(200).call(zoom.transform, d3.zoomIdentity.translate(el.clientWidth/2-(n.x+w/2)*k, el.clientHeight/2-(n.y+n.h/2)*k).scale(k)); }
+}
+nodeSel.on('click',(ev,n)=>{ ev.stopPropagation(); select(n.id); }).on('keydown',(ev,n)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); select(n.id); }});
+fixSel.on('click',(ev,f)=>{ ev.stopPropagation(); select(f.id); }).on('keydown',(ev,f)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); select(f.id); }});
+svg.on('click',()=>{ if(selected||kind){ selected=null; kind=null; render(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ selected=null; kind=null; render(); }});
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{ mode=b.dataset.mode; render(); }));
+document.querySelectorAll('[data-kind]').forEach(b=>b.addEventListener('click',()=>{ kind = kind===b.dataset.kind?null:b.dataset.kind; selected=null; render(); }));
+document.getElementById('t-fixes').addEventListener('click',()=>{ showFixes=!showFixes; render(); fit(true); });
+document.getElementById('t-fit').addEventListener('click',()=>fit(true));
+
+const h = (location.hash||'').slice(1);
+if (['demand','supply','stock'].includes(h)) kind=h;
+if (h==='fixes') showFixes=true;
+render();
+new ResizeObserver(()=>fit(false)).observe(document.getElementById('canvas'));
+fit(false);
+window.addEventListener('load',()=>fit(false));
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>fit(false));
+</script>
+</html>
